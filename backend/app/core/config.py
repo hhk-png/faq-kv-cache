@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -15,21 +14,25 @@ class Settings(BaseSettings):
     documents_dir: str = "data/documents"
     cache_status_file: str = "data/cache_status.json"
 
-    # Redis & Celery
+    # LLM (OpenAI-compatible API)
+    llm_api_key: str = "sk-your-api-key"
+    llm_base_url: str = "https://api.deepseek.com/v1"
+    llm_model: str = "deepseek-chat"
+    llm_max_tokens: int = 4096
+    llm_temperature: float = 0.3
+
+    # Redis & Celery (optional, disabled by default)
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/0"
     celery_result_backend: str = "redis://localhost:6379/0"
 
-    # LLM (OpenAI-compatible API, e.g. DeepSeek)
-    llm_api_key: str = "sk-your-api-key"
-    llm_base_url: str = "https://api.deepseek.com/anthropic"
-    llm_model: str = "deepseek-v4-flash"
-    llm_max_tokens: int = 1024
-    llm_temperature: float = 0.3
+    # FAQ block settings
+    faq_block_min_tokens: int = 10000
+    faq_max_results: int = 5
+    faq_block_size: int = 25
 
-    # Cache warm
+    # Cache warm (legacy, kept for compatibility)
     cache_warm_debounce_seconds: int = 5
-    faq_block_size: int = 10
 
     model_config = SettingsConfigDict(
         env_file=".env",

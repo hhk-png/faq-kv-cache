@@ -9,6 +9,7 @@ interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
   references?: FaqReference[]
+  isStatus?: boolean
 }
 
 let msgId = 0
@@ -19,6 +20,7 @@ const QaChat: React.FC = () => {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null)
+  const [statusMsgId, setStatusMsgId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -37,7 +39,12 @@ const QaChat: React.FC = () => {
 
     setInput('')
 
-    // Add user message
+    // Build conversation history for the API
+    const convHistory = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+
+    // Add user message to local state
     const userMsg: Message = { id: nextId(), role: 'user', content: question }
     const assistMsg: Message = { id: nextId(), role: 'assistant', content: '' }
 
@@ -47,18 +54,41 @@ const QaChat: React.FC = () => {
 
     await askQuestionStream(
       {
-        question,
+        messages: [...convHistory, { role: 'user', content: question }],
         prior_knowledge_type: pkMode === 'none' ? null : pkMode,
         prior_knowledge_content: pkMode === 'text' ? pkText : undefined,
         document_id: pkMode === 'document' ? pkDocId : undefined,
       },
       {
+        onStatus: (statusText) => {
+          // Show search process status in a system message
+          const statusId = `status_${assistMsg.id}`
+          setStatusMsgId(statusId)
+          setMessages(prev => {
+            const exists = prev.find(m => m.id === statusId)
+            if (exists) {
+              return prev.map(m => m.id === statusId ? { ...m, content: statusText } : m)
+            }
+            // Insert status before the assistant message
+            const idx = prev.findIndex(m => m.id === assistMsg.id)
+            const statusMsg: Message = { id: statusId, role: 'system', content: statusText, isStatus: true }
+            const copy = [...prev]
+            copy.splice(idx, 0, statusMsg)
+            return copy
+          })
+        },
+        onSearchDecision: (search) => {
+          // Optionally show whether we're searching
+        },
         onToken: (token) => {
-          setMessages(prev =>
-            prev.map(m =>
+          setMessages(prev => {
+            // Remove status messages related to this turn
+            const filtered = prev.filter(m => !(m.isStatus && m.id.includes(assistMsg.id)))
+            setStatusMsgId(null)
+            return filtered.map(m =>
               m.id === assistMsg.id ? { ...m, content: m.content + token } : m,
-            ),
-          )
+            )
+          })
         },
         onDone: (references) => {
           setMessages(prev =>
@@ -83,7 +113,7 @@ const QaChat: React.FC = () => {
         },
       },
     )
-  }, [input, loading, pkMode, pkText, pkDocId])
+  }, [input, loading, pkMode, pkText, pkDocId, messages])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -92,16 +122,32 @@ const QaChat: React.FC = () => {
     }
   }
 
+  const clearChat = () => {
+    setMessages([])
+    setStreamingMsgId(null)
+    setStatusMsgId(null)
+  }
+
   return (
     <div className="flex h-full">
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-dark-border">
-          <h1 className="text-xl font-semibold text-dark-text">FAQ智能问答</h1>
-          <p className="text-sm text-dark-text-secondary mt-1">
-            基于FAQ库和先验知识的智能问答系统（流式输出）
-          </p>
+        <div className="px-6 py-4 border-b border-dark-border flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-dark-text">FAQ智能问答</h1>
+            <p className="text-sm text-dark-text-secondary mt-1">
+              基于FAQ库的智能搜索问答系统
+            </p>
+          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={clearChat}
+              className="px-3 py-1.5 text-xs text-dark-text-secondary border border-dark-border rounded-lg hover:text-dark-text transition-all"
+            >
+              清空对话
+            </button>
+          )}
         </div>
 
         {/* Messages */}
@@ -111,7 +157,7 @@ const QaChat: React.FC = () => {
               <div className="text-5xl mb-4">💬</div>
               <p className="text-dark-text-secondary text-lg mb-2">开始提问</p>
               <p className="text-dark-text-secondary text-sm max-w-md">
-                在下方输入您的问题，系统将基于FAQ库和先验知识为您提供智能回答。
+                在下方输入您的问题，系统将自动判断是否需要搜索FAQ库，并为您提供智能回答。
               </p>
             </div>
           ) : (
@@ -148,7 +194,7 @@ const QaChat: React.FC = () => {
               disabled={loading || !input.trim()}
               className="px-6 py-3 bg-accent/10 text-accent border border-accent/20 rounded-xl hover:bg-accent/20 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '回答中...' : '发送'}
+              {loading ? '处理中...' : '发送'}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import pytest
 import json
+from unittest.mock import patch, AsyncMock
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
@@ -119,17 +120,23 @@ async def test_cache_status(client):
 
 
 @pytest.mark.asyncio
-async def test_qa_ask_no_faqs(client):
-    resp = await client.post("/api/qa/ask", json={"question": "你好"})
+@patch("app.services.qa_service.chat_completion", new_callable=AsyncMock)
+async def test_qa_ask_no_faqs(mock_chat, client):
+    """When no FAQs exist, the block manager returns no candidates."""
+    mock_chat.return_value = "nosearch"
+    resp = await client.post("/api/qa/ask", json={
+        "messages": [{"role": "user", "content": "你好"}],
+    })
     assert resp.status_code == 200
     data = resp.json()["data"]
-    # Should return empty FAQ message since no FAQs
     assert data["answer"] is not None
 
 
 @pytest.mark.asyncio
 async def test_qa_ask_empty_question(client):
-    resp = await client.post("/api/qa/ask", json={"question": ""})
+    resp = await client.post("/api/qa/ask", json={
+        "messages": [{"role": "user", "content": ""}],
+    })
     assert resp.status_code == 400
 
 

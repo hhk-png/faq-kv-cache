@@ -24,6 +24,8 @@ export async function askQuestion(req: AskRequest): Promise<ApiResponse<QaRespon
 export async function askQuestionStream(
   req: AskRequest,
   callbacks: {
+    onStatus?: (status: string) => void
+    onSearchDecision?: (search: boolean) => void
     onToken: (token: string) => void
     onDone: (references: { id: string; question: string; category: string }[]) => void
     onError: (error: string) => void
@@ -65,12 +67,22 @@ export async function askQuestionStream(
 
         try {
           const data: SseEvent = JSON.parse(trimmed.slice(6))
-          if (data.type === 'token') {
-            callbacks.onToken(data.content)
-          } else if (data.type === 'done') {
-            callbacks.onDone(data.references)
-          } else if (data.type === 'error') {
-            callbacks.onError(data.content)
+          switch (data.type) {
+            case 'token':
+              callbacks.onToken(data.content)
+              break
+            case 'done':
+              callbacks.onDone(data.references)
+              break
+            case 'error':
+              callbacks.onError(data.content)
+              break
+            case 'status':
+              callbacks.onStatus?.(data.content)
+              break
+            case 'search_decision':
+              callbacks.onSearchDecision?.(data.search)
+              break
           }
         } catch {
           // Skip malformed JSON lines

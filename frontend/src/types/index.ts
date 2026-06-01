@@ -49,8 +49,13 @@ export interface DocumentListResponse {
 }
 
 // ===== QA Types =====
+export interface MessageItem {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface AskRequest {
-  question: string;
+  messages: MessageItem[];
   prior_knowledge_type?: 'document' | 'text' | null;
   prior_knowledge_content?: string;
   document_id?: string;
@@ -68,6 +73,16 @@ export interface FaqReference {
 }
 
 // ===== SSE Stream Types =====
+export interface SseStatus {
+  type: 'status';
+  content: string;
+}
+
+export interface SseSearchDecision {
+  type: 'search_decision';
+  search: boolean;
+}
+
 export interface SseToken {
   type: 'token';
   content: string;
@@ -84,7 +99,7 @@ export interface SseError {
   content: string;
 }
 
-export type SseEvent = SseToken | SseDone | SseError;
+export type SseEvent = SseStatus | SseSearchDecision | SseToken | SseDone | SseError;
 
 // ===== Cache Types =====
 export interface CacheBlockStatus {
