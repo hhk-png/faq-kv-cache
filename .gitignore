@@ -41,6 +41,3 @@ backend/data/documents/
 
 # Celery
 celerybeat-schedule/
-
-
-localgovfaq

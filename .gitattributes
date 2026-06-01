@@ -1,0 +1,2 @@
+# FAQ raw dataset - exclude from GitHub language statistics
+backend/localgovfaq/** linguist-generated=true
