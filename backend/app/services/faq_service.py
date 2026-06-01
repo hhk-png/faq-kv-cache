@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.storage.file_store import get_faq_store
-from app.services.cache_service import trigger_cache_warm
+from app.services.block_manager import block_manager
 
 
 def _now() -> str:
@@ -47,7 +47,7 @@ def create_faq(data: dict) -> dict:
         "updated_at": _now(),
     }
     get_faq_store().insert(faq)
-    trigger_cache_warm()
+    block_manager.rebuild_blocks()
     return faq
 
 
@@ -58,14 +58,14 @@ def update_faq(faq_id: str, data: dict) -> dict | None:
     updates["updated_at"] = _now()
     result = get_faq_store().update(faq_id, updates)
     if result:
-        trigger_cache_warm()
+        block_manager.rebuild_blocks()
     return result
 
 
 def delete_faq(faq_id: str) -> bool:
     result = get_faq_store().delete(faq_id)
     if result:
-        trigger_cache_warm()
+        block_manager.rebuild_blocks()
     return result
 
 
@@ -87,7 +87,7 @@ def batch_create_faqs(items: list[dict]) -> list[dict]:
     existing = store.read_all()
     existing.extend(created)
     store.write_all(existing)
-    trigger_cache_warm()
+    block_manager.rebuild_blocks()
     return created
 
 

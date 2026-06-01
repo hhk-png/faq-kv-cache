@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { fetchFaqs, createFaq, updateFaq, deleteFaq, batchCreateFaqs, rebuildCache } from '../../services/faq'
-import { fetchCacheStatus } from '../../services/cache'
-import type { FaqItem, FaqCreateRequest, CacheBlockStatus } from '../../types'
+import { fetchFaqs, createFaq, updateFaq, deleteFaq, batchCreateFaqs } from '../../services/faq'
+import type { FaqItem, FaqCreateRequest } from '../../types'
 
 interface FaqFormData {
   category: string
@@ -31,10 +30,6 @@ const FaqManage: React.FC = () => {
   const [showBatchModal, setShowBatchModal] = useState(false)
   const [batchInput, setBatchInput] = useState('')
   const [batchResult, setBatchResult] = useState<string | null>(null)
-
-  // Cache status
-  const [cacheStatus, setCacheStatus] = useState<CacheBlockStatus[]>([])
-  const [showCachePanel, setShowCachePanel] = useState(false)
 
   const loadFaqs = useCallback(async () => {
     setLoading(true)
@@ -118,25 +113,6 @@ const FaqManage: React.FC = () => {
     }
   }
 
-  const handleRebuildCache = async () => {
-    try {
-      await rebuildCache()
-      alert('已触发缓存重建')
-    } catch (err: any) {
-      alert(err.message || '触发失败')
-    }
-  }
-
-  const loadCacheStatus = async () => {
-    try {
-      const res = await fetchCacheStatus()
-      setCacheStatus(res.data)
-      setShowCachePanel(!showCachePanel)
-    } catch (err: any) {
-      alert(err.message || '获取缓存状态失败')
-    }
-  }
-
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -146,12 +122,6 @@ const FaqManage: React.FC = () => {
           <p className="text-sm text-dark-text-secondary mt-1">管理FAQ问答条目，支持单条和批量操作</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={loadCacheStatus} className="px-4 py-2 text-sm text-dark-text-secondary border border-dark-border rounded-lg hover:border-accent/30 transition-all">
-            {showCachePanel ? '隐藏缓存' : '缓存状态'}
-          </button>
-          <button onClick={handleRebuildCache} className="px-4 py-2 text-sm text-dark-text-secondary border border-dark-border rounded-lg hover:border-accent/30 transition-all">
-            重建缓存
-          </button>
           <button onClick={() => setShowBatchModal(true)} className="px-4 py-2 text-sm text-dark-text-secondary border border-dark-border rounded-lg hover:border-accent/30 transition-all">
             批量导入
           </button>
@@ -160,32 +130,6 @@ const FaqManage: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Cache Status Panel */}
-      {showCachePanel && (
-        <div className="mb-6 bg-dark-card border border-dark-border rounded-xl p-4">
-          <h3 className="text-sm font-medium text-dark-text mb-3">缓存预热状态</h3>
-          {cacheStatus.length === 0 ? (
-            <p className="text-xs text-dark-text-secondary">暂无缓存数据，请先录入FAQ并触发缓存重建。</p>
-          ) : (
-            <div className="grid grid-cols-4 gap-2">
-              {cacheStatus.map((block) => (
-                <div key={block.block_id} className="bg-dark-bg rounded-lg p-3 border border-dark-border">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-mono text-dark-text-secondary truncate">{block.block_id}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded ${block.status === 'success' ? 'text-success bg-success/10' : 'text-danger bg-danger/10'}`}>
-                      {block.status}
-                    </span>
-                  </div>
-                  {block.usage && (
-                    <p className="text-xs text-dark-text-secondary">{block.usage.total_tokens} tokens</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Filters */}
       <div className="flex gap-3 mb-4">

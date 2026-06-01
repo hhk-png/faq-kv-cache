@@ -106,20 +106,6 @@ async def test_batch_create_faqs(client):
 
 
 @pytest.mark.asyncio
-async def test_rebuild_cache(client):
-    resp = await client.post("/api/faqs/rebuild-cache")
-    assert resp.status_code == 200
-    assert "triggered" in resp.json()["message"]
-
-
-@pytest.mark.asyncio
-async def test_cache_status(client):
-    resp = await client.get("/api/cache/status")
-    assert resp.status_code == 200
-    assert "data" in resp.json()
-
-
-@pytest.mark.asyncio
 @patch("app.services.qa_service.chat_completion", new_callable=AsyncMock)
 async def test_qa_ask_no_faqs(mock_chat, client):
     """When no FAQs exist, the block manager returns no candidates."""

@@ -9,7 +9,6 @@ from app.services.faq_service import (
     delete_faq,
     batch_create_faqs,
 )
-from app.services.cache_service import trigger_cache_warm, get_cache_status
 
 router = APIRouter(prefix="/api/faqs", tags=["FAQ"])
 
@@ -63,9 +62,3 @@ async def api_delete_faq(faq_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="FAQ not found")
     return {"message": "FAQ deleted successfully"}
-
-
-@router.post("/rebuild-cache")
-async def api_rebuild_cache():
-    trigger_cache_warm()
-    return {"message": "Cache rebuild triggered"}

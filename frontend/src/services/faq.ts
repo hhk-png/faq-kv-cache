@@ -50,7 +50,3 @@ export async function batchCreateFaqs(items: FaqCreateRequest[]): Promise<ApiRes
     body: JSON.stringify({ items }),
   })
 }
-
-export async function rebuildCache(): Promise<ApiResponse<null>> {
-  return request<ApiResponse<null>>(`${BASE_URL}/rebuild-cache`, { method: 'POST' })
-}

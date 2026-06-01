@@ -72,32 +72,21 @@ class JsonFileStore:
         return len(self.read_all())
 
 
-# Lazy-loaded store instances (re-created when settings change, e.g. in tests)
-_store_cache: dict[str, JsonFileStore] = {}
-
-
-def _get_store(file_key: str, settings_attr: str) -> JsonFileStore:
-    path = getattr(settings, settings_attr)
-    cache_key = f"{file_key}:{path}"
-    if cache_key not in _store_cache:
-        _store_cache[cache_key] = JsonFileStore(path)
-    return _store_cache[cache_key]
+# Lazy-loaded FAQ store (re-created when settings change, e.g. in tests)
+_faq_store: JsonFileStore | None = None
 
 
 def get_faq_store() -> JsonFileStore:
-    return _get_store("faq", "faq_file")
-
-
-def get_cache_status_store() -> JsonFileStore:
-    return _get_store("cache_status", "cache_status_file")
+    global _faq_store
+    if _faq_store is None or str(_faq_store.file_path) != settings.faq_file:
+        _faq_store = JsonFileStore(settings.faq_file)
+    return _faq_store
 
 
 # Module-level __getattr__ for backward-compatible `from X import faq_store`
 def __getattr__(name: str) -> Any:
     if name == "faq_store":
         return get_faq_store()
-    if name == "cache_status_store":
-        return get_cache_status_store()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

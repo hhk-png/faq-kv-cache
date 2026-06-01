@@ -16,24 +16,20 @@ def setup_test_env():
     tmp_dir = tempfile.mkdtemp()
     original_data_dir = settings.data_dir
     original_faq_file = settings.faq_file
-    original_cache_file = settings.cache_status_file
 
     settings.data_dir = tmp_dir
     settings.faq_file = os.path.join(tmp_dir, "faqs.json")
-    settings.cache_status_file = os.path.join(tmp_dir, "cache_status.json")
 
     # Ensure directories exist
     os.makedirs(tmp_dir, exist_ok=True)
 
-    # Initialize empty JSON files
+    # Initialize empty JSON file
     with open(settings.faq_file, "w", encoding="utf-8") as f:
         json.dump([], f)
-    with open(settings.cache_status_file, "w", encoding="utf-8") as f:
-        json.dump([], f)
 
-    # Clear store cache so get_faq_store() picks up new paths
+    # Reset FAQ store so get_faq_store() picks up new paths
     import app.storage.file_store as fs
-    fs._store_cache.clear()
+    fs._faq_store = None
 
     yield
 
@@ -41,7 +37,6 @@ def setup_test_env():
     shutil.rmtree(tmp_dir, ignore_errors=True)
     settings.data_dir = original_data_dir
     settings.faq_file = original_faq_file
-    settings.cache_status_file = original_cache_file
 
 
 @pytest.fixture

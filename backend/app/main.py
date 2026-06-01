@@ -10,7 +10,6 @@ from app.services.block_manager import block_manager
 from app.api.faq import router as faq_router
 from app.api.document import router as document_router
 from app.api.qa import router as qa_router
-from app.api.cache import router as cache_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,7 +47,6 @@ app.add_middleware(
 app.include_router(faq_router)
 app.include_router(document_router)
 app.include_router(qa_router)
-app.include_router(cache_router)
 
 
 @app.get("/api/health")

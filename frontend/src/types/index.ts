@@ -101,21 +101,6 @@ export interface SseError {
 
 export type SseEvent = SseStatus | SseSearchDecision | SseToken | SseDone | SseError;
 
-// ===== Cache Types =====
-export interface CacheBlockStatus {
-  block_id: string;
-  type: string;
-  category?: string;
-  prefix: string;
-  status: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-  error?: string;
-}
-
 // ===== API Response Types =====
 export interface ApiResponse<T> {
   data: T;
