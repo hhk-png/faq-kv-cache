@@ -41,4 +41,5 @@ backend/data/documents/
 
 # Celery
 celerybeat-schedule/
-backend/data/faq_datasets
+backend/data/faq_datasets/amagasaki
+backend/data/faq_datasets/oncology
