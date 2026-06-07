@@ -16,10 +16,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Load sessions on mount and when navigating (refresh after session creation)
+  // Load sessions on mount, and refresh on custom 'session-changed' event
   useEffect(() => {
-    fetchSessions().then(res => setSessions(res.data)).catch(() => {})
-  }, [location.pathname])
+    const load = () => fetchSessions().then(res => setSessions(res.data)).catch(() => {})
+    load()
+    window.addEventListener('session-changed', load)
+    return () => window.removeEventListener('session-changed', load)
+  }, [])
 
   // Auto-switch sidebar tab based on route
   useEffect(() => {
@@ -176,8 +179,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      {/* Main Content — overflow-auto for FaqManage etc. that rely on page-level scroll */}
+      <main className="flex-1 overflow-auto min-w-0">
         {children}
       </main>
     </div>

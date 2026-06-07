@@ -7,7 +7,7 @@ from app.storage.file_store import JsonFileStore
 
 class TestJsonFileStore:
     def _temp_path(self, name: str) -> str:
-        return os.path.join(os.path.dirname(settings.faq_file), name)
+        return os.path.join(settings.data_dir, name)
 
     def test_init_creates_file(self):
         path = self._temp_path("test_init.json")

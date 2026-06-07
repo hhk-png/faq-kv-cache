@@ -31,8 +31,7 @@ const App: React.FC = () => {
           <Route path="/" element={<Navigate to="/qa" replace />} />
           <Route path="/faq" element={<FaqManage />} />
           <Route path="/documents" element={<DocumentManage />} />
-          <Route path="/qa" element={<QaChat />} />
-          <Route path="/qa/:sessionId" element={<QaChat />} />
+          <Route path="/qa/:sessionId?" element={<QaChat />} />
           <Route path="*" element={<Navigate to="/qa" replace />} />
         </Routes>
       </Layout>

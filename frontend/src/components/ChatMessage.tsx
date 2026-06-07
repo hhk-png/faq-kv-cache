@@ -8,7 +8,7 @@ interface ChatMessageProps {
   loading?: boolean
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, references, loading }) => {
+const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ role, content, references, loading }) => {
   if (loading) {
     return (
       <div className="flex gap-3 px-4 py-3">
@@ -75,6 +75,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, references, lo
       </div>
     </div>
   )
-}
+})
 
 export default ChatMessage

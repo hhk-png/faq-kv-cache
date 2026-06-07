@@ -49,13 +49,8 @@ export interface DocumentListResponse {
 }
 
 // ===== QA Types =====
-export interface MessageItem {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 export interface AskRequest {
-  messages: MessageItem[];
+  question: string;
   prior_knowledge_type?: 'document' | 'text' | null;
   prior_knowledge_content?: string;
   document_id?: string;

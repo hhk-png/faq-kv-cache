@@ -58,18 +58,23 @@ async def chat_completion(
     model: str | None = None,
     max_tokens: int | None = None,
     temperature: float | None = None,
+    response_format: dict | None = None,
 ) -> str:
     """Non-streaming chat completion. Uses sync client in thread to avoid blocking."""
     import asyncio
 
+    kwargs = dict(
+        model=model or _get_llm_model(),
+        messages=messages,
+        max_tokens=max_tokens or settings.llm_max_tokens,
+        temperature=temperature or settings.llm_temperature,
+    )
+    if response_format:
+        kwargs["response_format"] = response_format
+
     def _sync_call() -> str:
         client = get_llm_client()
-        response = client.chat.completions.create(
-            model=model or _get_llm_model(),
-            messages=messages,
-            max_tokens=max_tokens or settings.llm_max_tokens,
-            temperature=temperature or settings.llm_temperature,
-        )
+        response = client.chat.completions.create(**kwargs)
         return response.choices[0].message.content or ""
 
     return await asyncio.to_thread(_sync_call)

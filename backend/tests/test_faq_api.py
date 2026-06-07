@@ -113,8 +113,7 @@ async def test_qa_ask_no_faqs(mock_stream, client):
         yield "测试回答"
     mock_stream.side_effect = _gen
     resp = await client.post("/api/qa/ask", json={
-        "session_id": "",
-        "messages": [{"role": "user", "content": "你好"}],
+        "question": "你好",
     })
     assert resp.status_code == 200
     data = resp.json()["data"]
@@ -124,8 +123,7 @@ async def test_qa_ask_no_faqs(mock_stream, client):
 @pytest.mark.asyncio
 async def test_qa_ask_empty_question(client):
     resp = await client.post("/api/qa/ask", json={
-        "session_id": "",
-        "messages": [{"role": "user", "content": ""}],
+        "question": "",
     })
     assert resp.status_code == 400
 

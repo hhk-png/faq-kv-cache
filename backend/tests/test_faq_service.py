@@ -9,7 +9,7 @@ from app.services.faq_service import (
     batch_create_faqs,
     get_categories,
 )
-from app.storage.file_store import get_faq_store
+from app.storage.file_store import get_all_faqs
 
 
 class TestFaqService:
@@ -71,7 +71,7 @@ class TestFaqService:
         ]
         created = batch_create_faqs(items)
         assert len(created) == 2
-        assert get_faq_store().count() == 2
+        assert len(get_all_faqs()) == 2
 
     def test_get_categories(self):
         create_faq({"category": "支付", "question": "Q1", "answer": "A1"})

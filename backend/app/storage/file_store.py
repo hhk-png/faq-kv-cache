@@ -78,9 +78,126 @@ _faq_store: JsonFileStore | None = None
 
 def get_faq_store() -> JsonFileStore:
     global _faq_store
-    if _faq_store is None or str(_faq_store.file_path) != settings.faq_file:
-        _faq_store = JsonFileStore(settings.faq_file)
+    path = os.path.join(settings.data_dir, "faqs.json")
+    if _faq_store is None or str(_faq_store.file_path) != path:
+        _faq_store = JsonFileStore(path)
     return _faq_store
+
+
+def _faqs_dir() -> Path:
+    return Path(settings.faq_dataset_path)
+
+
+def _build_cat_index() -> dict[str, str]:
+    """Build {category: filename} from files on disk."""
+    idx = {}
+    faqs_dir = _faqs_dir()
+    if not faqs_dir.exists():
+        return idx
+    for f in sorted(faqs_dir.glob("*.json")):
+        if f.name == "format.md":
+            continue
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            if data:
+                cat = data[0].get("category", "")
+                if cat:
+                    idx[cat] = f.name
+        except Exception:
+            continue
+    return idx
+
+
+def _cat_to_file(category: str) -> Path:
+    """Get the file path for a category's FAQ file. Builds index from disk."""
+    idx = _build_cat_index()
+    if category in idx:
+        return _faqs_dir() / idx[category]
+    # New category: use sanitized category name as filename
+    safe = "".join(c if c.isalnum() or c in "_-" else "_" for c in category)
+    return _faqs_dir() / f"{safe}.json"
+
+
+def _write_category(category: str, faqs: list[dict]):
+    """Write FAQs for a single category to its file."""
+    target = _cat_to_file(category)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = target.with_suffix(".json.lock")
+    with FileLock(str(lock_path)):
+        target.write_text(
+            json.dumps(faqs, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
+def get_all_faqs() -> list[dict]:
+    """Read all FAQs from the dataset path (config.faq_dataset_path)."""
+    faqs_dir = _faqs_dir()
+    if not faqs_dir.exists():
+        return []
+
+    all_faqs = []
+    for f in sorted(faqs_dir.glob("*.json")):
+        if f.name == "format.md":
+            continue
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            all_faqs.extend(data)
+        except Exception:
+            continue
+    return all_faqs
+
+
+def insert_faq(faq: dict):
+    """Insert a FAQ into the appropriate category file."""
+    cat = faq.get("category", "未分类")
+    target = _cat_to_file(cat)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if target.exists():
+        existing = json.loads(target.read_text(encoding="utf-8"))
+    else:
+        existing = []
+    existing.append(faq)
+    _write_category(cat, existing)
+
+
+def update_faq_by_id(faq_id: str, updates: dict) -> bool:
+    """Update a FAQ by ID, handling possible category change."""
+    all_faqs = get_all_faqs()
+    for faq in all_faqs:
+        if faq["id"] == faq_id:
+            old_cat = faq.get("category", "未分类")
+            faq.update(updates)
+            new_cat = faq.get("category", "未分类")
+            if old_cat == new_cat:
+                same_cat = [f for f in all_faqs if f.get("category") == old_cat]
+                _write_category(old_cat, same_cat)
+            else:
+                # Rewrite both old and new category files
+                old_faqs = [f for f in all_faqs if f.get("category") == old_cat and f["id"] != faq_id]
+                new_faqs = [f for f in all_faqs if f.get("category") == new_cat]
+                _write_category(old_cat, old_faqs)
+                _write_category(new_cat, new_faqs)
+            return True
+    return False
+
+
+def delete_faq_by_id(faq_id: str) -> bool:
+    """Delete a FAQ by ID from its category file."""
+    all_faqs = get_all_faqs()
+    target = None
+    for faq in all_faqs:
+        if faq["id"] == faq_id:
+            target = faq
+            break
+    if not target:
+        return False
+    cat = target.get("category", "未分类")
+    remaining = [f for f in all_faqs if f["id"] != faq_id]
+    cat_faqs = [f for f in remaining if f.get("category") == cat]
+    _write_category(cat, cat_faqs)
+    return True
 
 
 # Module-level __getattr__ for backward-compatible `from X import faq_store`

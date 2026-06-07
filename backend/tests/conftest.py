@@ -15,28 +15,20 @@ def setup_test_env():
     """Set up test environment with temporary data directory."""
     tmp_dir = tempfile.mkdtemp()
     original_data_dir = settings.data_dir
-    original_faq_file = settings.faq_file
+    original_faq_dataset = settings.faq_dataset_path
 
     settings.data_dir = tmp_dir
-    settings.faq_file = os.path.join(tmp_dir, "faqs.json")
+    settings.faq_dataset_path = os.path.join(tmp_dir, "faq_dataset")
 
     # Ensure directories exist
     os.makedirs(tmp_dir, exist_ok=True)
-
-    # Initialize empty JSON file
-    with open(settings.faq_file, "w", encoding="utf-8") as f:
-        json.dump([], f)
-
-    # Reset FAQ store so get_faq_store() picks up new paths
-    import app.storage.file_store as fs
-    fs._faq_store = None
 
     yield
 
     # Cleanup
     shutil.rmtree(tmp_dir, ignore_errors=True)
     settings.data_dir = original_data_dir
-    settings.faq_file = original_faq_file
+    settings.faq_dataset_path = original_faq_dataset
 
 
 @pytest.fixture
