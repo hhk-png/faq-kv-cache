@@ -17,12 +17,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 export async function askQuestion(req: AskRequest): Promise<ApiResponse<QaResponse>> {
   return request<ApiResponse<QaResponse>>(`${BASE_URL}/ask`, {
     method: 'POST',
-    body: JSON.stringify(req),
+    body: JSON.stringify({ ...req, user_id: localStorage.getItem('faq_user_id') || '' }),
   })
 }
 
 export async function askQuestionStream(
   req: AskRequest,
+  sessionId: string,
   callbacks: {
     onStatus?: (status: string) => void
     onSearchDecision?: (search: boolean) => void
@@ -34,7 +35,7 @@ export async function askQuestionStream(
   const res = await fetch(`${BASE_URL}/ask/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
+    body: JSON.stringify({ ...req, session_id: sessionId, user_id: localStorage.getItem('faq_user_id') || '' }),
   })
 
   if (!res.ok) {

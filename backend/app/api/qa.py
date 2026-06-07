@@ -14,6 +14,8 @@ class MessageItem(BaseModel):
 
 
 class AskRequest(BaseModel):
+    user_id: str = ""
+    session_id: str = ""
     messages: list[MessageItem]
     prior_knowledge_type: Optional[str] = None
     prior_knowledge_content: Optional[str] = None
@@ -28,6 +30,7 @@ async def api_ask(req: AskRequest):
     msgs = [{"role": m.role, "content": m.content} for m in req.messages]
     result = await process_question(
         messages=msgs,
+        session_id=req.session_id,
         prior_knowledge_type=req.prior_knowledge_type,
         prior_knowledge_content=req.prior_knowledge_content,
         document_id=req.document_id,
@@ -46,6 +49,8 @@ async def api_ask_stream(req: AskRequest):
     return StreamingResponse(
         process_question_stream(
             messages=msgs,
+            session_id=req.session_id,
+            user_id=req.user_id,
             prior_knowledge_type=req.prior_knowledge_type,
             prior_knowledge_content=req.prior_knowledge_content,
             document_id=req.document_id,

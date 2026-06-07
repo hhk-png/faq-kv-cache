@@ -106,11 +106,14 @@ async def test_batch_create_faqs(client):
 
 
 @pytest.mark.asyncio
-@patch("app.services.qa_service.chat_completion", new_callable=AsyncMock)
-async def test_qa_ask_no_faqs(mock_chat, client):
-    """When no FAQs exist, the block manager returns no candidates."""
-    mock_chat.return_value = "nosearch"
+@patch("app.services.qa_service.chat_completion_stream")
+async def test_qa_ask_no_faqs(mock_stream, client):
+    """When no FAQs exist, block manager returns no candidates."""
+    async def _gen(*args, **kwargs):
+        yield "测试回答"
+    mock_stream.side_effect = _gen
     resp = await client.post("/api/qa/ask", json={
+        "session_id": "",
         "messages": [{"role": "user", "content": "你好"}],
     })
     assert resp.status_code == 200
@@ -121,6 +124,7 @@ async def test_qa_ask_no_faqs(mock_chat, client):
 @pytest.mark.asyncio
 async def test_qa_ask_empty_question(client):
     resp = await client.post("/api/qa/ask", json={
+        "session_id": "",
         "messages": [{"role": "user", "content": ""}],
     })
     assert resp.status_code == 400

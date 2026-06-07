@@ -101,6 +101,14 @@ export interface SseError {
 
 export type SseEvent = SseStatus | SseSearchDecision | SseToken | SseDone | SseError;
 
+// ===== Session Types =====
+export interface SessionInfo {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // ===== API Response Types =====
 export interface ApiResponse<T> {
   data: T;

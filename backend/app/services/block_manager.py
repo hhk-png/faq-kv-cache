@@ -138,7 +138,7 @@ class FaqBlockManager:
         # Build conversation context once
         conv_parts = []
         if history:
-            for msg in history[-4:]:
+            for msg in history[-5:]:  # Block搜索只看最近5轮
                 role = "用户" if msg["role"] == "user" else "助手"
                 conv_parts.append(f"{role}: {msg['content']}")
         conv_parts.append(f"用户: {question}")
