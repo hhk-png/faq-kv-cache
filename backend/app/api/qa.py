@@ -15,6 +15,7 @@ class AskRequest(BaseModel):
     prior_knowledge_type: Optional[str] = None
     prior_knowledge_content: Optional[str] = None
     document_id: Optional[str] = None
+    previous_assistant_content: Optional[str] = None  # 断线重连时，前端已收到的部分回复
 
 
 @router.post("/ask")
@@ -47,6 +48,7 @@ async def api_ask_stream(req: AskRequest):
             prior_knowledge_type=req.prior_knowledge_type,
             prior_knowledge_content=req.prior_knowledge_content,
             document_id=req.document_id,
+            previous_assistant_content=req.previous_assistant_content,
         ),
         media_type="text/event-stream",
         headers={

@@ -53,8 +53,16 @@ async def process_question_stream(
     prior_knowledge_type: Optional[str] = None,
     prior_knowledge_content: Optional[str] = None,
     document_id: Optional[str] = None,
+    previous_assistant_content: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
-    """Process question with streaming. History loaded from session store."""
+    """Process question with streaming. History loaded from session store.
+
+    If *previous_assistant_content* is provided (non-empty), the generator
+    skips the FAQ-search status events and instead tells the LLM to
+    *continue* from where it left off — used for reconnection after a
+    network interruption.
+    """
+    is_retry = bool(previous_assistant_content and previous_assistant_content.strip())
     if not question.strip():
         yield f"data: {json.dumps({'type': 'error', 'content': 'Question is required'})}\n\n"
         return
@@ -75,23 +83,30 @@ async def process_question_stream(
         # Step 2: Always search FAQ
         selected_faqs = []
         if block_manager.category_count == 0:
-            yield f"data: {json.dumps({'type': 'status', 'content': 'FAQ库为空，跳过搜索。'})}\n\n"
+            if not is_retry:
+                yield f"data: {json.dumps({'type': 'status', 'content': 'FAQ库为空，跳过搜索。'})}\n\n"
         else:
-            yield f"data: {json.dumps({'type': 'status', 'content': '正在匹配相关类别...'})}\n\n"
+            if not is_retry:
+                yield f"data: {json.dumps({'type': 'status', 'content': '正在匹配相关类别...'})}\n\n"
             matched_cats = await block_manager.match_categories(question)
             if matched_cats:
-                yield f"data: {json.dumps({'type': 'status', 'content': f'匹配到 {len(matched_cats)} 个相关类别，正在搜索...'})}\n\n"
+                if not is_retry:
+                    yield f"data: {json.dumps({'type': 'status', 'content': f'匹配到 {len(matched_cats)} 个相关类别，正在搜索...'})}\n\n"
                 relevant_ids = await block_manager.search_ids_in_blocks(matched_cats, question, history)
                 if relevant_ids:
                     selected_faqs = block_manager.get_faqs_by_ids(relevant_ids, settings.faq_max_results)
-                    yield f"data: {json.dumps({'type': 'status', 'content': f'找到 {len(relevant_ids)} 条相关FAQ，已选择 {len(selected_faqs)} 条作为参考。'})}\n\n"
+                    if not is_retry:
+                        yield f"data: {json.dumps({'type': 'status', 'content': f'找到 {len(relevant_ids)} 条相关FAQ，已选择 {len(selected_faqs)} 条作为参考。'})}\n\n"
                 else:
-                    yield f"data: {json.dumps({'type': 'status', 'content': '未在相关类别中找到匹配的FAQ条目。'})}\n\n"
+                    if not is_retry:
+                        yield f"data: {json.dumps({'type': 'status', 'content': '未在相关类别中找到匹配的FAQ条目。'})}\n\n"
             else:
-                yield f"data: {json.dumps({'type': 'status', 'content': '未找到直接相关的FAQ条目。'})}\n\n"
+                if not is_retry:
+                    yield f"data: {json.dumps({'type': 'status', 'content': '未找到直接相关的FAQ条目。'})}\n\n"
 
         # Step 3: Build context and generate answer
-        yield f"data: {json.dumps({'type': 'status', 'content': '正在生成回答...'})}\n\n"
+        if not is_retry:
+            yield f"data: {json.dumps({'type': 'status', 'content': '正在生成回答...'})}\n\n"
 
         conv_messages = []
 
@@ -106,22 +121,40 @@ async def process_question_stream(
             for msg in history:
                 conv_messages.append({"role": msg["role"], "content": msg["content"]})
 
-        # Build user message — FAQ context comes BEFORE the question so the model reads it as relevant context
-        user_content = question
-        if selected_faqs:
-            faq_context = "\n\n以下是来自FAQ库的参考信息，请优先基于这些信息回答：\n\n"
-            for faq in selected_faqs:
-                faq_context += f"[FAQ {faq['id']}] {faq['category']} {faq['question']}\n{faq['answer']}\n\n"
-            faq_context += "\n请基于以上FAQ信息回答用户的问题。如果FAQ信息不足以回答，可以结合自身知识补充。"
-            user_content = faq_context + "\n\n" + question
-        else:
-            # Explicitly tell the AI no FAQ was found — prevents AI from fabricating a search narrative
-            user_content = question + "\n\n【系统】FAQ库中未找到与问题相关的条目，请直接用自己的知识回答。"
-        conv_messages.append({"role": "user", "content": user_content})
+        if is_retry:
+            # --- 续写模式 ---
+            # 保留原问题作为 user message, 把已收到的回复片段作为 assistant,
+            # 然后追加一条 "请继续" 的 user message
+            user_content_retry = question
+            if selected_faqs:
+                faq_context = "\n\n以下是来自FAQ库的参考信息，请优先基于这些信息回答：\n\n"
+                for faq in selected_faqs:
+                    faq_context += f"[FAQ {faq['id']}] {faq['category']} {faq['question']}\n{faq['answer']}\n\n"
+                faq_context += "\n请基于以上FAQ信息回答用户的问题。如果FAQ信息不足以回答，可以结合自身知识补充。"
+                user_content_retry = faq_context + "\n\n" + question
+            else:
+                user_content_retry = question + "\n\n【系统】FAQ库中未找到与问题相关的条目，请直接用自己的知识回答。"
 
-        # Stream the answer
-        logger.info(f"开始生成回答，上下文共 {sum(len(m.get('content','')) for m in conv_messages)} 字符")
-        full_answer = ""
+            conv_messages.append({"role": "user", "content": user_content_retry})
+            conv_messages.append({"role": "assistant", "content": previous_assistant_content})
+            conv_messages.append({"role": "user", "content": "请继续你上面的回答，不要重复之前已写过的内容。"})
+
+            full_answer = previous_assistant_content or ""
+        else:
+            # --- 首次回答模式 ---
+            # Build user message — FAQ context comes BEFORE the question so the model reads it as relevant context
+            user_content = question
+            if selected_faqs:
+                faq_context = "\n\n以下是来自FAQ库的参考信息，请优先基于这些信息回答：\n\n"
+                for faq in selected_faqs:
+                    faq_context += f"[FAQ {faq['id']}] {faq['category']} {faq['question']}\n{faq['answer']}\n\n"
+                faq_context += "\n请基于以上FAQ信息回答用户的问题。如果FAQ信息不足以回答，可以结合自身知识补充。"
+                user_content = faq_context + "\n\n" + question
+            else:
+                # Explicitly tell the AI no FAQ was found — prevents AI from fabricating a search narrative
+                user_content = question + "\n\n【系统】FAQ库中未找到与问题相关的条目，请直接用自己的知识回答。"
+            conv_messages.append({"role": "user", "content": user_content})
+            full_answer = ""
         async for token in chat_completion_stream(conv_messages):
             full_answer += token
             yield f"data: {json.dumps({'type': 'token', 'content': token})}\n\n"

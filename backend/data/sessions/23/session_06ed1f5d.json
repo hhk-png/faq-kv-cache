@@ -1,0 +1,26 @@
+[
+  {
+    "role": "user",
+    "content": "hello"
+  },
+  {
+    "role": "assistant",
+    "content": "Hello! 你好！有什么可以帮你的吗？"
+  },
+  {
+    "role": "user",
+    "content": "输出一段带有各种样式的md内容"
+  },
+  {
+    "role": "assistant",
+    "content": "当然！以下是一段包含多种Markdown样式的示例内容：\n\n# 一级标题：Markdown 样式展示\n\n## 二级标题：文字样式\n\n**加粗文字** 和 *斜体文字* 以及 ~~删除线文字~~，还可以用 `行内代码`。\n\n> 这是一个引用块，可以引用某人的话或重要提示。\n\n### 三级标题：列表\n\n无序列表：\n- 苹果\n- 香蕉\n- 樱桃\n\n有序列表：\n1. 第一步：打开文件\n2. 第二步：编辑内容\n3. 第三步：保存并退出\n\n#### 四级标题：代码块\n\n```python\ndef hello_world():\n    print(\"Hello, Markdown!\")\n```\n\n##### 五级标题：表格\n\n| 名称   | 价格  | 数量 |\n|--------|-------|------|\n| 鼠标   | 25.0  | 3    |\n| 键盘   | 45.5  | 1    |\n| 显示器 | 199.9 | 2    |\n\n###### 六级标题：其他元素\n\n- [x] 已完成任务\n- [ ] 待办事项\n- 链接：[访问 GitHub](https://github.com)\n- 图片：![示例图片](https://via.placeholder.com/150)\n\n分割线：\n---\n\n**脚注示例**：这里有一个脚注[^1]。\n\n[^1]: 这是脚注内容，通常出现在页面底部。\n\n希望这个示例能帮助你理解Markdown的各种样式！"
+  },
+  {
+    "role": "user",
+    "content": "输出abc"
+  },
+  {
+    "role": "assistant",
+    "content": "abc"
+  }
+]

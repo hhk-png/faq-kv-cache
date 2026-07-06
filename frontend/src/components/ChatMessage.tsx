@@ -1,4 +1,9 @@
 import React from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { FaqReference } from '../types'
 
 interface ChatMessageProps {
@@ -6,6 +11,70 @@ interface ChatMessageProps {
   content: string
   references?: FaqReference[]
   loading?: boolean
+}
+
+/** 判断字符串是否包含 markdown 标记 */
+function containsMarkdown(text: string): boolean {
+  // 标题、粗体、斜体、代码块、行内代码、列表、引用、表格
+  return /(#{1,6}\s|(\*\*|__).*?\*\*|__|`{1,3}|^\s*[-*+]\s|^\s*\d+\.\s|^>\s|^\s*\|.+?\|)/m.test(text)
+}
+
+const MarkdownContent: React.FC<{ content: string }> = ({ content }) => {
+  return (
+    <div className="prose prose-invert prose-sm max-w-none prose-headings:text-dark-text prose-a:text-accent prose-code:bg-dark-bg prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-transparent prose-pre:p-0">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={{
+          code({ className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '')
+            const codeStr = String(children).replace(/\n$/, '')
+            if (match) {
+              return (
+                <SyntaxHighlighter
+                  style={oneDark}
+                  language={match[1]}
+                  PreTag="div"
+                  customStyle={{ margin: 0, borderRadius: 8, fontSize: 13 }}
+                >
+                  {codeStr}
+                </SyntaxHighlighter>
+              )
+            }
+            // 行内代码
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            )
+          },
+          table({ children }) {
+            return (
+              <div className="overflow-auto my-2">
+                <table className="min-w-full border-collapse border border-dark-border text-sm">
+                  {children}
+                </table>
+              </div>
+            )
+          },
+          th({ children }) {
+            return (
+              <th className="border border-dark-border bg-dark-card px-3 py-2 text-left font-medium">
+                {children}
+              </th>
+            )
+          },
+          td({ children }) {
+            return (
+              <td className="border border-dark-border px-3 py-2">{children}</td>
+            )
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  )
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ role, content, references, loading }) => {
@@ -53,7 +122,16 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ role, content, ref
               : 'bg-dark-card text-dark-text border border-dark-border'
           }`}
         >
-          <p className="whitespace-pre-wrap">{content}</p>
+          {isUser ? (
+            // 用户消息保持纯文本
+            <p className="whitespace-pre-wrap">{content}</p>
+          ) : containsMarkdown(content) ? (
+            // AI / 系统消息 — 渲染 markdown
+            <MarkdownContent content={content} />
+          ) : (
+            // 没有 markdown 标记时仍用纯文本，避免不必要的渲染开销
+            <p className="whitespace-pre-wrap">{content}</p>
+          )}
         </div>
 
         {/* References */}
