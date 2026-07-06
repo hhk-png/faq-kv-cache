@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.3
 
     # FAQ block settings
-    faq_block_min_tokens: int = 300000
+    faq_block_min_tokens: int = 100000
     faq_max_results: int = 5
 
     model_config = SettingsConfigDict(
