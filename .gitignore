@@ -31,15 +31,6 @@ Thumbs.db
 node_modules/
 frontend/dist/
 
-# Backend data
-backend/data/faqs.json
-backend/data/cache_status.json
-backend/data/documents/
 
 # Logs
 *.log
-
-# Celery
-celerybeat-schedule/
-backend/data/faq_datasets/amagasaki
-backend/data/faq_datasets/oncology
